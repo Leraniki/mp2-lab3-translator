@@ -1,49 +1,71 @@
-#include "list.h"
+#include "stack.h"
 
 #include <gtest.h>
 
-TEST(Iterator, oper_adress) {          
-    List<int> l(2);
-    l.insert_front(2);
-    l.insert_front(1);
-
-    List<int>::Iterator it = l.begin();
-    EXPECT_EQ(*it, 1);
+TEST(Stack, can_create_stack) {
+	ASSERT_NO_THROW(Stack<int> s);
 }
 
-TEST(Iterator, pref_plus) {
+TEST(Stack, can_push_to_stack) {
+	Stack<int> s;
 
-    List<int> l(2);
-    l.insert_front(2);
-    l.insert_front(1);
+	s.push(2);
 
-    List<int>::Iterator it = l.begin();
-    EXPECT_EQ(*it, 1);
-    ++it;
-    EXPECT_EQ(*it, 2);
-
+	EXPECT_EQ(1,s.size());
 }
 
-TEST(Iterator, post_plus) {
+TEST(Stack, can_pop_from_stack) {
+	Stack<int> s;
 
-    List<int> l(2);
-    l.insert_front(2);
-    l.insert_front(1);
+	s.push(2);
 
-    List<int>::Iterator it = l.begin();
-    EXPECT_EQ(*it, 1);
-    List<int>::Iterator it2 = it++;
-    EXPECT_EQ(*it2, 1);
-    EXPECT_EQ(*it, 2);
-
+	ASSERT_NO_THROW(s.pop());
 }
 
-TEST(Iterator, oper_not_equal) {
+TEST(Stack, can_top_stack) {
+	Stack<int> s;
 
-    List<int> l(3);
+	s.push(2);
+	s.push(5);
 
-    List<int>::Iterator it1 = l.begin();
-    List<int>::Iterator it2 = l.end();
- 
-    EXPECT_EQ(it1 != it2, 1);
+	ASSERT_NO_THROW(s.top());
+	EXPECT_EQ(5, s.top());
+}
+
+TEST(Stack, check_empty_stack) {
+	Stack<int> s;
+
+	s.push(2);
+	s.push(5);
+
+	EXPECT_EQ(false, s.empty());
+}
+
+TEST(Stack, get_size_of_stack) {
+	Stack<int> s;
+
+	s.push(2);
+	s.push(5);
+
+	EXPECT_EQ(2, s.size());
+}
+
+TEST(Stack, pop_push) {
+	Stack<int> s;
+
+	s.push(1);
+	s.push(2);
+	s.push(3);
+
+	s.pop();
+	s.pop();
+
+	s.push(4);
+	s.push(5);
+
+	s.pop();
+	s.pop();
+	s.pop();
+
+	EXPECT_EQ(0, s.size());
 }
