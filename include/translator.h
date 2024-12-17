@@ -45,7 +45,7 @@ public:
             if (isspace(c)) continue;
 
             if (isdigit(c) || c == '.') {
-                current_number += c; // Сбор числа
+                current_number += c; 
             }
             else {
                 if (!current_number.empty()) {
@@ -60,30 +60,29 @@ public:
                     tokens.push_back({ TokenType::RPAREN, ")" });
                 }
                 else if (c == '-') {
-                    // Подсчет унарных минусов
+                    
                     int minus_count = 1;
                     while (i + 1 < infix.length() && infix[i + 1] == '-') {
                         ++minus_count;
                         ++i;
                     }
 
-                    // Если минусов четное количество, знак "+"
                     if (tokens.empty() || tokens.back().type != TokenType::OPERAND && tokens.back().value != ")") {
                         tokens.push_back({ TokenType::OPERAND, "0" });
                     }
 
                     if (minus_count % 2 == 0) {
-                        tokens.push_back({ TokenType::OPERATOR, "+" }); // Четное количество минусов
+                        tokens.push_back({ TokenType::OPERATOR, "+" });
                     }
                     else {
-                        tokens.push_back({ TokenType::OPERATOR, "-" }); // Нечетное количество
+                        tokens.push_back({ TokenType::OPERATOR, "-" }); 
                     }
                 }
                 else if (string("+-*/").find(c) != string::npos) {
                     tokens.push_back({ TokenType::OPERATOR, string(1, c) });
                 }
                 else {
-                    throw 1; // Некорректный символ
+                    throw 1; 
                 }
             }
         }
@@ -114,7 +113,7 @@ public:
                 if(operators.empty()){
                     throw 1;
                 }
-                operators.pop(); // Pop the left parenthesis
+                operators.pop(); 
             } else if (token.type == TokenType::OPERATOR) {
                 while (!operators.empty() && operators.top().type != TokenType::LPAREN && priority[token.value[0]] <= priority[operators.top().value[0]]) {
                     postfix += operators.top().value + " ";
@@ -126,14 +125,14 @@ public:
 
         while (!operators.empty()) {
             if (operators.top().type == TokenType::LPAREN) {
-                throw 1; // Mismatched parenthesis
+                throw 1; 
             }
              postfix += operators.top().value + " ";
              operators.pop();
         }
 
         if (!postfix.empty()) {
-            postfix.pop_back(); // Remove the trailing space
+            postfix.pop_back(); 
         }
     }
 
@@ -141,7 +140,7 @@ public:
     string get_infix() const { return infix; }
     string get_postfix() const { return postfix; }
 
-    double calculate(const std::map<char, double>& val) { // Removed unused 'val' parameter
+    double calculate(const std::map<char, double>& val) { 
         Stack<double> operands;
         stringstream ss(postfix);
         string token;
@@ -151,26 +150,26 @@ public:
                 try {
                     operands.push(stod(token));
                 } catch (const std::invalid_argument& e) {
-                    throw 1; // Handle invalid operand
+                    throw 1; 
                 }
             } else if (string("+-*/").find(token[0]) != string::npos) {
                 if (operands.size() < 2) {
-                     throw 1; // Not enough operands
+                     throw 1; 
                 }
                 double op2 = operands.top(); operands.pop();
                 double op1 = operands.top(); operands.pop();
                  try {
                     operands.push(calc_operations(op1, op2, token[0]));
                 } catch (const std::runtime_error& e) {
-                     throw ; // Re-throw exception
+                     throw ; 
                 }
             } else {
-                  throw 1; // Invalid token
+                  throw 1; 
             }
         }
 
         if (operands.size() != 1) {
-             throw 1; // Invalid expression
+             throw 1; 
         }
         return operands.top();
     }
@@ -181,9 +180,9 @@ public:
         case '-': return operand1 - operand2;
         case '*': return operand1 * operand2;
         case '/':
-            if (operand2 == 0) throw std::runtime_error("Division by zero");
+            if (operand2 == 0) throw "Division by zero";
             return operand1 / operand2;
-        default: throw std::runtime_error("Invalid operator");
+        default: throw "Invalid operator";
         }
     }
 };
