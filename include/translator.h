@@ -2,13 +2,13 @@
 #define __Translator_H__
 
 #include <iostream>
-#include "stack.h"
+#include "stack.h" 
 #include <cctype>
 #include <sstream>
 #include <stdexcept>
 #include <map>
 #include <string>
-#include <algorithm> 
+#include <vector>
 
 using namespace std;
 
@@ -19,12 +19,16 @@ protected:
     string infix;
     map<char, int> priority = { {'(', 0}, {')', 0}, {'+', 1}, {'-', 1}, {'*', 2}, {'/', 2} };
 
-    enum class State {
-        START,
+    enum class TokenType {
         OPERAND,
         OPERATOR,
         LPAREN,
         RPAREN
+    };
+
+    struct Token {
+        TokenType type;
+        string value;
     };
 
 public:
@@ -32,142 +36,104 @@ public:
         to_postfix();
     }
 
-    void to_postfix() {
-        int openParenthesesCount = 0;
-        Stack<char> operators;
-        State state = State::START;
-        std::string cleanInfix;
+    vector<Token> parse() {
+        vector<Token> tokens;
+        string current_number;
 
-        for (char c : infix) {
-            if (c != ' ') {
-                cleanInfix += c;
+        for (size_t i = 0; i < infix.length(); ++i) {
+            char c = infix[i];
+            if (isspace(c)) continue;
+
+            if (isdigit(c) || c == '.') {
+                current_number += c; // Сбор числа
             }
-        }
-
-        for (size_t i = 0; i < cleanInfix.length(); ++i) {
-            char c = cleanInfix[i];
-
-            switch (state) {
-            case State::START:
-            case State::OPERAND:
-                if (isalnum(c) || c == '.') {
-                    
-                    postfix += c;
-                    state = State::OPERAND;
-                    
+            else {
+                if (!current_number.empty()) {
+                    tokens.push_back({ TokenType::OPERAND, current_number });
+                    current_number = "";
                 }
-                else {
-                    if (postfix.length() > 0 && postfix.back() != ' ') {
-                        postfix += ' ';
-                    }
-                    if (c == '(') {
-                        operators.push(c);
-                        openParenthesesCount++;
-                    }
-                    else if (string("+-*/").find(c) != string::npos) {
-                        while (!operators.empty() && operators.top() != '(' && priority[c] <= priority[operators.top()]) {
-                            postfix += operators.top();
-                            postfix += ' ';
-                            operators.pop();
-                        }
-                        operators.push(c);
-                    }
-                    else if (c == ')') {
-                        while (!operators.empty() && operators.top() != '(') {
-                            postfix += operators.top();
-                            postfix += ' ';
-                            operators.pop();
-                        }
-                        if (operators.empty()) {
-                            throw 1;
-                        }
-                        operators.pop();
-                        openParenthesesCount--;
 
+                if (c == '(') {
+                    tokens.push_back({ TokenType::LPAREN, "(" });
+                }
+                else if (c == ')') {
+                    tokens.push_back({ TokenType::RPAREN, ")" });
+                }
+                else if (c == '-') {
+                    // Подсчет унарных минусов
+                    int minus_count = 1;
+                    while (i + 1 < infix.length() && infix[i + 1] == '-') {
+                        ++minus_count;
+                        ++i;
+                    }
+
+                    // Если минусов четное количество, знак "+"
+                    if (tokens.empty() || tokens.back().type != TokenType::OPERAND && tokens.back().value != ")") {
+                        tokens.push_back({ TokenType::OPERAND, "0" });
+                    }
+
+                    if (minus_count % 2 == 0) {
+                        tokens.push_back({ TokenType::OPERATOR, "+" }); // Четное количество минусов
                     }
                     else {
-                        throw 1;
+                        tokens.push_back({ TokenType::OPERATOR, "-" }); // Нечетное количество
                     }
-
-                    state = (c == '(') ? State::LPAREN : State::OPERATOR; 
-                }
-                break;
-
-            case State::OPERATOR:
-                if (isalnum(c) || c == '.') {
-                    postfix += c;
-                    state = State::OPERAND;
-                }
-                else {
-                    if (postfix.length() > 0 && postfix.back() != ' ') {
-                        postfix += ' ';
-                    }
-                    if (c == '(') {
-                        operators.push(c);
-                        openParenthesesCount++;
-
-                    }
-                    else if (string("+-*/").find(c) != string::npos) {
-                        while (!operators.empty() && operators.top() != '(' && priority[c] <= priority[operators.top()]) {
-                            postfix += operators.top();
-                            postfix += ' ';
-                            operators.pop();
-                        }
-                        operators.push(c);
-                    }
-                    else if (c == ')') {
-                        while (!operators.empty() && operators.top() != '(') {
-                            postfix += operators.top();
-                            postfix += ' ';
-                            operators.pop();
-                        }
-                        if (operators.empty()) {
-                            throw 1;
-                        }
-                        operators.pop();
-                        openParenthesesCount--;
-
-                    }
-                    else {
-                        throw 1;
-                    }
-                    state = (c == '(') ? State::LPAREN : State::OPERATOR; 
-                }
-                break;
-
-            case State::LPAREN:
-                if (isalnum(c) || c == '.') {
-                    postfix += c;
-                    state = State::OPERAND;
-                }
-                else if (c == '(') {
-                    operators.push(c);
-                    openParenthesesCount++;
                 }
                 else if (string("+-*/").find(c) != string::npos) {
-                    operators.push(c);
-                    state = State::OPERATOR; 
+                    tokens.push_back({ TokenType::OPERATOR, string(1, c) });
                 }
                 else {
+                    throw 1; // Некорректный символ
+                }
+            }
+        }
+
+        if (!current_number.empty()) {
+            tokens.push_back({ TokenType::OPERAND, current_number });
+        }
+
+        return tokens;
+    }
+
+
+    void to_postfix() {
+        Stack<Token> operators;
+        vector<Token> tokens = parse();
+
+
+        for (const auto& token : tokens) {
+            if (token.type == TokenType::OPERAND) {
+                postfix += token.value + " ";
+            } else if (token.type == TokenType::LPAREN) {
+                operators.push(token);
+            } else if (token.type == TokenType::RPAREN) {
+                while (!operators.empty() && operators.top().type != TokenType::LPAREN) {
+                    postfix += operators.top().value + " ";
+                    operators.pop();
+                }
+                if(operators.empty()){
                     throw 1;
                 }
-                break;
-
+                operators.pop(); // Pop the left parenthesis
+            } else if (token.type == TokenType::OPERATOR) {
+                while (!operators.empty() && operators.top().type != TokenType::LPAREN && priority[token.value[0]] <= priority[operators.top().value[0]]) {
+                    postfix += operators.top().value + " ";
+                    operators.pop();
+                }
+                operators.push(token);
             }
         }
-
 
         while (!operators.empty()) {
-            if (postfix.back() != ' ') { 
-                postfix += ' ';
+            if (operators.top().type == TokenType::LPAREN) {
+                throw 1; // Mismatched parenthesis
             }
-            postfix += operators.top();
-            operators.pop();
+             postfix += operators.top().value + " ";
+             operators.pop();
         }
 
-
-        if (openParenthesesCount != 0) {
-            throw 1;
+        if (!postfix.empty()) {
+            postfix.pop_back(); // Remove the trailing space
         }
     }
 
@@ -175,63 +141,39 @@ public:
     string get_infix() const { return infix; }
     string get_postfix() const { return postfix; }
 
-    double calculate(const std::map<char, double>& val) {
+    double calculate(const std::map<char, double>& val) { // Removed unused 'val' parameter
         Stack<double> operands;
-        std::stringstream ss(postfix);
-        std::string token;
+        stringstream ss(postfix);
+        string token;
 
         while (ss >> token) {
             if (isdigit(token[0]) || token[0] == '.') {
                 try {
                     operands.push(stod(token));
+                } catch (const std::invalid_argument& e) {
+                    throw 1; // Handle invalid operand
                 }
-                catch (const std::invalid_argument& e) {
-                    throw 1;
+            } else if (string("+-*/").find(token[0]) != string::npos) {
+                if (operands.size() < 2) {
+                     throw 1; // Not enough operands
                 }
+                double op2 = operands.top(); operands.pop();
+                double op1 = operands.top(); operands.pop();
+                 try {
+                    operands.push(calc_operations(op1, op2, token[0]));
+                } catch (const std::runtime_error& e) {
+                     throw ; // Re-throw exception
+                }
+            } else {
+                  throw 1; // Invalid token
             }
-            else if (token.length() == 1 && (token[0] == '+' || token[0] == '-' || token[0] == '*' || token[0] == '/')) {
-                if (token[0] == '+' || token[0] == '-') { 
-                    if (operands.size() == 1 && (ss.peek() == EOF || !isalnum(ss.peek()))) { 
-                        double op = operands.top();
-                        operands.pop();
-                        operands.push(calc_unar_operations(op, token[0]));
-                    }
-                    else if (operands.size() >= 2) { // Бинарный оператор
-                        double op2 = operands.top(); operands.pop();
-                        double op1 = operands.top(); operands.pop();
-                        operands.push(calc_operations(op1, op2, token[0]));
-                    }
-                    else {
-                        throw 1;
-                    }
-
-                }
-                else { 
-                    if (operands.size() < 2) {
-                        throw 1;
-                    }
-                    double op2 = operands.top(); operands.pop();
-                    double op1 = operands.top(); operands.pop();
-                    try {
-                        operands.push(calc_operations(op1, op2, token[0]));
-                    }
-                    catch (const std::runtime_error& e) {
-                        throw;
-                    }
-                }
-            }
-            else {
-                throw 1;
-            }
-
         }
 
         if (operands.size() != 1) {
-            throw 1;
+             throw 1; // Invalid expression
         }
         return operands.top();
     }
-
 
     double calc_operations(double operand1, double operand2, char operation) {
         switch (operation) {
@@ -239,17 +181,9 @@ public:
         case '-': return operand1 - operand2;
         case '*': return operand1 * operand2;
         case '/':
-            if (operand2 == 0) throw 1;
+            if (operand2 == 0) throw std::runtime_error("Division by zero");
             return operand1 / operand2;
-        default: throw 1;
-        }
-    }
-
-    double calc_unar_operations(double operand1, char operation) { // Для унарных операторов
-        switch (operation) {
-        case '+': return +operand1; 
-        case '-': return -operand1;
-        default: throw 1;
+        default: throw std::runtime_error("Invalid operator");
         }
     }
 };
